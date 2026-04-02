@@ -1,0 +1,88 @@
+---
+title: "Zip Competition"
+author: "Luana Lima"
+output: pdf_document
+always_allow_html: true
+editor_options: 
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+```{r}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=80), tidy=FALSE) 
+```
+
+```{r}
+library(lubridate)
+library(ggplot2)
+library(forecast)  
+library(Kendall)
+library(tseries)
+library(outliers)
+library(tidyverse)
+library(smooth)
+library(zoo)
+library(kableExtra)
+```
+Import Data
+```{r}
+
+install.packages("readxl")
+library(readxl)
+
+#import load data 
+
+load <- read_excel(path  = "../ZIP_Competition/load.xlsx", sheet = 1, col_names = TRUE)
+class(load$date)
+
+#Convert to daily data
+
+load_daily <- load %>%
+  mutate(date = as.Date(date)) %>%                  
+  mutate(daily_mean = rowMeans(select(., h1:h24), 
+                               na.rm = TRUE)) %>%
+  select(meter_id, date, daily_mean) 
+
+#Convert to time series
+load_ts <- msts(load_daily$daily_mean,
+                seasonal.periods = c(7, 365.25),
+                start = c(2005, 1))
+```
+
+Train the model
+
+```{r}
+#Use data from January 1, 2005, to July 31, 2010
+
+load_daily_2010July <- load_daily %>%
+  filter(date <= as.Date("2010-07-31"))
+
+load_daily_2010July <- msts(load_daily_2010July$daily_mean,
+                     seasonal.periods = c(7, 365.25),
+                     start = c(2005, 1))
+n_for <- 31
+
+#Train the data
+load_ts_train <- subset(load_daily_2010July, end = length(load_daily_2010July) - n_for)
+
+#Test
+load_ts_test  <- subset(load_daily_2010July, start = length(load_daily_2010July) - n_for + 1)
+
+autoplot(load_ts_train)
+autoplot(load_ts_test)
+```
+
+Naive Model
+```{r}
+SNAIVE_2011_July <- snaive(load_ts, h = n_for, holdout = FALSE)
+checkresiduals(SNAIVE_2011_July)
+plot(SNAIVE_2011_July)
+```
+
+Forecast Result
+
+```{r}
+forecast_values_naive <- as.data.frame(SNAIVE_2011_July$mean)
+print(forecast_values_naive)
+```
+
