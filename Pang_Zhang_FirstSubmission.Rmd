@@ -24,7 +24,9 @@ library(smooth)
 library(zoo)
 library(kableExtra)
 ```
-Import Data
+
+
+#Import Data
 ```{r}
 
 install.packages("readxl")
@@ -49,7 +51,7 @@ load_ts <- msts(load_daily$daily_mean,
                 start = c(2005, 1))
 ```
 
-Train the model
+#Train the model
 
 ```{r}
 #Use data from January 1, 2005, to July 31, 2010
@@ -70,19 +72,71 @@ load_ts_test  <- subset(load_daily_2010July, start = length(load_daily_2010July)
 
 autoplot(load_ts_train)
 autoplot(load_ts_test)
+
 ```
 
-Naive Model
+Model 1 Naive Model
+
+Step 1 Test and Record Score
+
 ```{r}
-SNAIVE_2011_July <- snaive(load_ts, h = n_for, holdout = FALSE)
-checkresiduals(SNAIVE_2011_July)
-plot(SNAIVE_2011_July)
+SNAIVE_test <- snaive(load_ts_train, h = n_for, holdout = FALSE)
+SNAIVE_scores<- accuracy(SNAIVE_test$mean, load_ts_test)
 ```
 
-Forecast Result
+
+Model 2: TBATS
+
+Step 1: Test and Record Score
+```{r}
+# Test TBATS
+TBATS_fit <- tbats(load_ts_train)
+TBATS_for <- forecast(TBATS_fit, h = n_for)
+TBATS_scores <- accuracy(TBATS_for$mean, load_ts_test)
+```
+
+Step 2 Compare
 
 ```{r}
-forecast_values_naive <- as.data.frame(SNAIVE_2011_July$mean)
-print(forecast_values_naive)
+# Compare with Native Model
+scores <- as.data.frame(rbind(SNAIVE_scores, TBATS_scores))
+row.names(scores) <- c("SNAIVE", "TBATS")
+print(scores)
+```
+
+Model 3 STL+ETS
+
+Step 1: Test and Record Score
+
+```{r}
+ETS_fit <- stlf(load_ts_train, h = n_for)
+ETS_scores <- accuracy(ETS_fit$mean, load_ts_test)
+```
+
+Step 2 Compare
+```{r}
+# Compare
+scores <- as.data.frame(rbind(SNAIVE_scores, TBATS_scores, ETS_scores))
+row.names(scores) <- c("SNAIVE", "TBATS", "STL+ETS")
+print(scores)
+```
+
+> TBATS has the best result.
+
+Forecast using TBATS
+```{r}
+TBATS_fit_final <- tbats(load_ts)
+TBATS_for_final <- forecast(TBATS_fit_final, h = 31)
+```
+
+
+Export Results in csv.
+```{r}
+submission <- data.frame(
+  date = seq(as.Date("2011-07-01"), as.Date("2011-07-31"), by = "day"),
+  load = as.numeric(TBATS_for_final$mean)
+)
+
+write.csv(submission, "./submission_ZIP2.csv", row.names = FALSE)
 ```
 
