@@ -1,6 +1,6 @@
 ---
 title: "Zip Competition"
-author: "Luana Lima"
+author: "Jingni Pang & Zhaoxin Zhang"
 output: pdf_document
 always_allow_html: true
 editor_options: 
@@ -8,11 +8,22 @@ editor_options:
   markdown: 
     wrap: sentence
 ---
+
+GitHub Repository: https://github.com/ZZhang727/Pang_Zhang_ZIP
+
+# Exective Summary
+
+This report is written to record the process of using R to leverage this historical data (from January 2005 to June 2011) to forecast daily electricity demand for July 2011. We applied different models to forecast electricity demand in July 2010 and compared the forecasting results with the actual data to identify the most accurate model. The model using Prophet + TBATS had the best results. Therefore, we applied the Prophet + TBATS model to forecast electricity load in July 2011.
+
+
 ```{r}
 knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=80), tidy=FALSE) 
 ```
 
+# Section 1: Data Wrangling
+
 ```{r}
+# Install Packages
 library(lubridate)
 library(ggplot2)
 library(forecast)  
@@ -25,16 +36,16 @@ library(zoo)
 library(kableExtra)
 ```
 
-
-#Import Data
-```{r}
+## 1.1 Import and Convert Data
+Hourly electricity load data spanning January 2005 to June 2011 were used to forecast daily load for July 2011. As the raw data consist of 24 hourly observations per day, daily mean load values were computed by averaging across all hours within each calendar day, yielding a single daily aggregate series. The resulting series was then converted to a time series object for subsequent modeling.
+```{r include=FALSE}
 
 install.packages("readxl")
 library(readxl)
 
 #import load data 
 
-load <- read_excel(path  = "../Competition/load.xlsx", sheet = 1, col_names = TRUE)
+load <- read_excel(path  = "../ZIP_Competition/load.xlsx", sheet = 1, col_names = TRUE)
 class(load$date)
 
 #Convert to daily data
@@ -51,8 +62,18 @@ load_ts <- msts(load_daily$daily_mean,
                 start = c(2005, 1))
 ```
 
-#Train the model
+```{r echo=FALSE}
+autoplot(load_ts) +
+  labs(
+    title = "Daily Mean Electricity Load (2005–2011)",
+    x = "Time",
+    y = "Mean Load (kW)"
+  ) +
+  theme_minimal()
+```
 
+# 2. Methodology
+The data were divided into a training set and a held-out test set. The training set spans January 2005 through June 2010 and was used to estimate model parameters and capture underlying temporal structure, including trend and seasonal components. The test set comprises the final 31 days of the sample (July 2010), which was withheld from model fitting and used exclusively for forecast evaluation, enabling comparison of predicted against realized daily mean load values across models. 
 ```{r}
 #Use data from January 1, 2005, to July 31, 2010
 
@@ -66,7 +87,7 @@ n_for <- 31
 
 #Train the data
 load_ts_train <- subset(load_daily_2010July, end = length(load_daily_2010July) - n_for)
-
+print(load_ts_train,10)
 #Test
 load_ts_test  <- subset(load_daily_2010July, start = length(load_daily_2010July) - n_for + 1)
 
@@ -74,6 +95,15 @@ autoplot(load_ts_train)
 autoplot(load_ts_test)
 
 ```
+
+```{r}
+
+```
+
+3. Testing
+We utilized different model to test. We used the models to 1. forecast the load in July 2011 2. compare the forecast results with the observed results to see if the models were accurate. 
+
+The first model we used is the Naive model. 
 
 Model 1 Naive Model
 
@@ -121,7 +151,6 @@ row.names(scores) <- c("SNAIVE", "TBATS", "STL+ETS")
 print(scores)
 ```
 
-> TBATS has the best result.
 
 Model 4: Neural Network
 
