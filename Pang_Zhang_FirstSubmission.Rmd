@@ -1,16 +1,13 @@
 ---
 title: "Zip Competition"
-<<<<<<< HEAD
 author: "Jingni Pang & Zhaoxin Zhang"
-output: pdf_document
-=======
-author: "Luana Lima"
-output: html_document
->>>>>>> f49477e (big pig head zzx)
+output:
+  html_document:
+    df_print: paged
 always_allow_html: true
-editor_options: 
+editor_options:
   chunk_output_type: console
-  markdown: 
+  markdown:
     wrap: sentence
 ---
 
@@ -21,13 +18,13 @@ GitHub Repository: https://github.com/ZZhang727/Pang_Zhang_ZIP
 This report is written to record the process of using R to leverage this historical data (from January 2005 to June 2011) to forecast daily electricity demand for July 2011. We applied different models to forecast electricity demand in July 2010 and compared the forecasting results with the actual data to identify the most accurate model. The model using Prophet + TBATS had the best results. Therefore, we applied the Prophet + TBATS model to forecast electricity load in July 2011.
 
 
-```{r}
+```{r include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=80), tidy=FALSE) 
 ```
 
 # Section 1: Data Wrangling
 
-```{r}
+```{r include=FALSE}
 # Install Packages
 library(lubridate)
 library(ggplot2)
@@ -70,7 +67,7 @@ load_ts <- msts(load_daily$daily_mean,
 ```{r echo=FALSE}
 autoplot(load_ts) +
   labs(
-    title = "Daily Mean Electricity Load (2005–2011)",
+    title = "Graph 1. Daily Mean Electricity Load (2005–2011)",
     x = "Time",
     y = "Mean Load (kW)"
   ) +
@@ -79,7 +76,7 @@ autoplot(load_ts) +
 
 # 2. Methodology
 The data were divided into a training set and a held-out test set. The training set spans January 2005 through June 2010 and was used to estimate model parameters and capture underlying temporal structure, including trend and seasonal components. The test set comprises the final 31 days of the sample (July 2010), which was withheld from model fitting and used exclusively for forecast evaluation, enabling comparison of predicted against realized daily mean load values across models. 
-```{r}
+```{r include=FALSE}
 #Use data from January 1, 2005, to July 31, 2010
 
 load_daily_2010July <- load_daily %>%
@@ -96,70 +93,49 @@ print(load_ts_train,10)
 #Test
 load_ts_test  <- subset(load_daily_2010July, start = length(load_daily_2010July) - n_for + 1)
 
-autoplot(load_ts_train)
-autoplot(load_ts_test)
 
 ```
 
-```{r}
+```{r echo=FALSE}
 
+autoplot(load_ts_train)+
+    labs(
+    title = "Graph 2. Daily Mean Electricity Load (Jan 2005– June 2010)",
+    x = "Time",
+    y = "Mean Load (kW)"
+  ) +
+  theme_minimal()
+
+autoplot(load_ts_test)+
+    labs(
+    title = "Graph 3. Daily Mean Electricity Load (July 2011)",
+    x = "Time",
+    y = "Mean Load (kW)"
+  ) +
+  theme_minimal()
 ```
 
-3. Testing
-We utilized different model to test. We used the models to 1. forecast the load in July 2011 2. compare the forecast results with the observed results to see if the models were accurate. 
 
-The first model we used is the Naive model. 
+# 3. Testing
+To evaluate forecast accuracy, each candidate model was trained on daily mean load data from January 2005 through June 2010 and used to generate out-of-sample forecasts for July 2010, which were then compared against realized values using RMSE, MAE, and MAPE. A Seasonal Naïve model was estimated as a baseline; however, it produced forecast errors, indicating that the data exhibit temporal patterns beyond simple seasonal repetition. Four additional specifications were subsequently evaluated: TBATS, Neural Network (NNETAR with Fourier terms), a TBATS–Neural Network combination, Prophet, and a TBATS–Prophet combination. Across all accuracy metrics, the TBATS–Prophet combination yielded the lowest errors and was selected as the final forecasting model to predict the electricity load in July 2011.
 
-Model 1 Naive Model
-
-Step 1 Test and Record Score
-
-```{r}
+```{r echo=FALSE}
+# Model1 Naive
 SNAIVE_test <- snaive(load_ts_train, h = n_for, holdout = FALSE)
 SNAIVE_scores<- accuracy(SNAIVE_test$mean, load_ts_test)
+SNAIVE_scores
 ```
 
 
-Model 2: TBATS
-
-Step 1: Test and Record Score
-```{r}
+```{r include=FALSE}
 # Test TBATS
 TBATS_fit <- tbats(load_ts_train)
 TBATS_for <- forecast(TBATS_fit, h = n_for)
 TBATS_scores <- accuracy(TBATS_for$mean, load_ts_test)
 ```
 
-Step 2 Compare
-
-```{r}
-# Compare with Naive Model
-scores <- as.data.frame(rbind(SNAIVE_scores, TBATS_scores))
-row.names(scores) <- c("SNAIVE", "TBATS")
-print(scores)
-```
-
-Model 3 STL+ETS
-
-Step 1: Test and Record Score
-
-```{r}
-ETS_fit <- stlf(load_ts_train, h = n_for)
-ETS_scores <- accuracy(ETS_fit$mean, load_ts_test)
-```
-
-Step 2 Compare
-```{r}
-# Compare
-scores <- as.data.frame(rbind(SNAIVE_scores, TBATS_scores, ETS_scores))
-row.names(scores) <- c("SNAIVE", "TBATS", "STL+ETS")
-print(scores)
-```
-
-
-Model 4: Neural Network
-
-```{r}
+```{r include=FALSE}
+#Neural Network
 NN_fit <- nnetar(load_ts_train,
                  p = 7,
                  P = 1,
@@ -172,128 +148,15 @@ NN_for <- forecast(NN_fit,
 NN_scores <- accuracy(NN_for$mean, load_ts_test)
 ```
 
-Model 5: STL+ARIMA
-```{r}
-# Model 5: STL + ARIMA
-STLARIMA_fit <- stlf(load_ts_train, method = "arima", h = n_for)
-STLARIMA_scores <- accuracy(STLARIMA_fit$mean, load_ts_test)
-print(STLARIMA_scores)
-```
-
-Model 6: ARIMA
-
-```{r}
-# Model 6: ARIMA + Fourier
-ARIMA_Four_fit <- Arima(load_ts_train,
-                        order = c(2, 0, 1),
-                        xreg = fourier(load_ts_train, K = c(2, 6)))
-ARIMA_Four_for <- forecast(ARIMA_Four_fit,
-                           h = n_for,
-                           xreg = fourier(load_ts_train, K = c(2, 6), h = n_for))
-
-ARIMA_Four_scores <- accuracy(ARIMA_Four_for$mean, load_ts_test)
-print(ARIMA_Four_scores)
-
-# Different K
-ARIMA_Four_fit2 <- Arima(load_ts_train,
-                         order = c(2, 0, 1),
-                         xreg = fourier(load_ts_train, K = c(3, 8)))
-
-ARIMA_Four_for2 <- forecast(ARIMA_Four_fit2,
-                            h = n_for,
-                            xreg = fourier(load_ts_train, K = c(3, 8), h = n_for))
-
-ARIMA_Four_scores2 <- accuracy(ARIMA_Four_for2$mean, load_ts_test)
-print(ARIMA_Four_scores2)
-```
-
-Combo: TBATS + NN
-
-```{r}
+```{r include=FALSE}
 # Combination: TBATS + NN
 COMBO_for <- (TBATS_for$mean + NN_for$mean) / 2
 COMBO_scores <- accuracy(COMBO_for, load_ts_test)
 print(COMBO_scores)
-
-# More weight on TBATS
-COMBO2_for <- (TBATS_for$mean * 0.7 + NN_for$mean * 0.3)
-COMBO2_scores <- accuracy(COMBO2_for, load_ts_test)
-print(COMBO2_scores)
 ```
 
-import humidity
-
-```{r}
-temp <- read_excel(path = "./temperature.xlsx", sheet = 1, col_names = TRUE)
-
-temp_daily <- temp %>%
-  mutate(date = as.Date(date)) %>%
-  group_by(date) %>%
-  summarise(daily_mean_temp = mean(c_across(t_ws1:t_ws28), na.rm = TRUE)) %>%
-  ungroup()
-
-load_daily_combined <- load_daily %>%
-  left_join(temp_daily, by = "date")
-
-humidity <- read_excel(path = "./relative_humidity.xlsx", sheet = 1, col_names = TRUE)
-
-humidity_daily <- humidity %>%
-  mutate(date = as.Date(date)) %>%
-  group_by(date) %>%
-  summarise(daily_mean_rh = mean(c_across(rh_ws1:rh_ws28), na.rm = TRUE)) %>%
-  ungroup()
-
-load_daily_combined2 <- load_daily_combined %>%
-  left_join(humidity_daily, by = "date")
-
-# xreg
-temp_rh_train <- load_daily_combined2 %>%
-  filter(date <= as.Date("2010-06-30")) %>%
-  pull(daily_mean_temp) %>%
-  cbind(load_daily_combined2 %>%
-    filter(date <= as.Date("2010-06-30")) %>%
-    pull(daily_mean_rh))
-
-temp_rh_test <- load_daily_combined2 %>%
-  filter(date >= as.Date("2010-07-01") & date <= as.Date("2010-07-31")) %>%
-  pull(daily_mean_temp) %>%
-  cbind(load_daily_combined2 %>%
-    filter(date >= as.Date("2010-07-01") & date <= as.Date("2010-07-31")) %>%
-    pull(daily_mean_rh))
-
-# ARIMA + Fourier + Temp + Humidity
-ARIMA_TRH_fit <- Arima(load_ts_train,
-                       order = c(2, 0, 1),
-                       xreg = cbind(fourier(load_ts_train, K = c(2, 6)), temp_rh_train))
-
-ARIMA_TRH_for <- forecast(ARIMA_TRH_fit,
-                          h = n_for,
-                          xreg = cbind(fourier(load_ts_train, K = c(2, 6), h = n_for), temp_rh_test))
-
-ARIMA_TRH_scores <- accuracy(ARIMA_TRH_for$mean, load_ts_test)
-print(ARIMA_TRH_scores)
-
-#NN using data combination
-
-temp_rh_train_vec <- cbind(temp_rh_train, fourier(load_ts_train, K = c(2, 2)))
-temp_rh_test_vec <- cbind(temp_rh_test, fourier(load_ts_train, K = c(2, 2), h = n_for))
-
-NN_TRH_fit <- nnetar(load_ts_train,
-                     p = 7,
-                     P = 1,
-                     xreg = temp_rh_train_vec)
-
-NN_TRH_for <- forecast(NN_TRH_fit,
-                       h = n_for,
-                       xreg = temp_rh_test_vec)
-
-NN_TRH_scores <- accuracy(NN_TRH_for$mean, load_ts_test)
-print(NN_TRH_scores)
-```
-
-Use Prophet
-
-```{r}
+```{r include=FALSE}
+#Prophet
 install.packages("prophet")
 library(prophet)
 
@@ -316,24 +179,22 @@ prophet_scores <- accuracy(prophet_pred, load_ts_test)
 print(prophet_scores)
 ```
 
-Final Forecast
-
-```{r}
-# Final Forecast
-TBATS_fit_final <- tbats(load_ts)
-TBATS_for_final <- forecast(TBATS_fit_final, h = 31)
-
-NN_fit_final <- nnetar(load_ts,
-                       p = 7,
-                       P = 1,
-                       xreg = fourier(load_ts, K = c(2, 2)))
-NN_for_final <- forecast(NN_fit_final,
-                         h = 31,
-                         xreg = fourier(load_ts, K = c(2, 2), h = 31))
+```{r include=FALSE}
+# Combination: TBATS + Prophet
+COMBO_TP_for <- (TBATS_for$mean + prophet_pred) / 2
+COMBO_TP_scores <- accuracy(COMBO_TP_for, load_ts_test)
 ```
 
-Combo: Prophet + TBATS
+## Compare Results
+```{r echo=FALSE}
+scores <- as.data.frame(rbind(TBATS_scores,NN_scores,COMBO_scores, prophet_scores,COMBO_TP_scores))
+row.names(scores) <- c("TBAT", "NN", "TBATS+NN", "Prophet", "TBAT+Prophet")
+print(scores)
+```
+Among the five models evaluated, TBATS achieved the lowest RMSE (578.17), MAE (444.73), and MAPE (11.34%), indicating strong overall predictive accuracy. However, its ME of -37.89 suggests a systematic tendency to underestimate load. The TBATS–Prophet combination, while marginally higher on RMSE (584.26) and MAE (457.26), produced a ME of -9.07, which was the closest one to zero across all models. Therefore, the TBATS–Prophet combination was selected as the final model.
 
+# Forecast Electricity Load in July 2011
+To generate the final forecast for July 2011, both models (TBATS and Prophet) were re-estimated on the full available training data. The Prophet model was fitted on daily mean load data spanning January 2005 through June 2011, with weekly and yearly seasonality enabled and daily seasonality disabled. A 31-day future dataframe was constructed using make_future_dataframe(), and point forecasts were extracted from the predicted yhat values corresponding to July 2011. In parallel, a TBATS model was re-fitted on the complete daily mean load time series (load_ts) and used to generate a 31-day ahead forecast. The final combined forecast was computed as a weighted average of the two models, assigning a weight of 0.8 to Prophet and 0.2 to TBATS (the weight was selected after trying different weight combinations to find the most accurate result), yielding daily predicted load values for each day in July 2011.
 ```{r}
 prophet_df_full <- load_daily %>%
   select(date, daily_mean) %>%
@@ -349,23 +210,28 @@ future_final <- make_future_dataframe(prophet_fit_final, periods = 31)
 prophet_for_final <- predict(prophet_fit_final, future_final)
 
 prophet_pred_final <- tail(prophet_for_final$yhat, 31)
+TBATS_fit_final <- tbats(load_ts)
+TBATS_for_final <- forecast(TBATS_fit_final, h = 31)
 
 combo_prophet_tbats2 <- (prophet_pred_final * 0.8 + as.numeric(TBATS_for_final$mean) * 0.2)
 ```
-Compare
-```{r}
-scores <- as.data.frame(rbind(SNAIVE_scores, TBATS_scores, ETS_scores,NN_scores,STLARIMA_scores,COMBO_scores,ARIMA_TRH_scores,NN_TRH_scores, prophet_scores))
-row.names(scores) <- c("SNAIVE", "TBATS", "STL+ETS","NN","STL+ARIMA", "TBATS+NN", "ARIMA_TRH_scores","NN_TRH_scores","prophet_scores")
-print(scores)
-```
 
-Export
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Export
 submission_combo_pt2 <- data.frame(
   date = seq(as.Date("2011-07-01"), as.Date("2011-07-31"), by = "day"),
   load = as.numeric(combo_prophet_tbats2)
 )
+
+knitr::kable(submission_combo_pt2, 
+             caption = "Predicted Daily Load for July 2011 (TBATS + Prophet)",
+             col.names = c("Date", "Predicted Load"),
+             digits = 3)
+```
+
+```{r include=FALSE}
+#Export as csv.
 write.csv(submission_combo_pt2, "./submission_combo_pt2.csv", row.names = FALSE)
 ```
 
-
+#(When implementing Prophet and the TBATS–Prophet combination, we utilized Claude as a coding assistant to help develop and refine our code.)
