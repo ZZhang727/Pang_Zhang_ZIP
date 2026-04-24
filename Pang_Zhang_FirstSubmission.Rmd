@@ -195,7 +195,7 @@ Among the five models evaluated, TBATS achieved the lowest RMSE (578.17), MAE (4
 
 # Forecast Electricity Load in July 2011
 To generate the final forecast for July 2011, both models (TBATS and Prophet) were re-estimated on the full available training data. The Prophet model was fitted on daily mean load data spanning January 2005 through June 2011, with weekly and yearly seasonality enabled and daily seasonality disabled. A 31-day future dataframe was constructed using make_future_dataframe(), and point forecasts were extracted from the predicted yhat values corresponding to July 2011. In parallel, a TBATS model was re-fitted on the complete daily mean load time series (load_ts) and used to generate a 31-day ahead forecast. The final combined forecast was computed as a weighted average of the two models, assigning a weight of 0.8 to Prophet and 0.2 to TBATS (the weight was selected after trying different weight combinations to find the most accurate result), yielding daily predicted load values for each day in July 2011.
-```{r}
+```{r include=FALSE}
 prophet_df_full <- load_daily %>%
   select(date, daily_mean) %>%
   rename(ds = date, y = daily_mean) %>%
