@@ -1,6 +1,6 @@
 ---
   title: "A8: "
-author: "豆豆"
+author: "Zhaoxin Zhang & Jingni Pang"
 output: pdf_document
 always_allow_html: true
 editor_options: 
