@@ -1,7 +1,12 @@
 ---
 title: "Zip Competition"
+<<<<<<< HEAD
 author: "Jingni Pang & Zhaoxin Zhang"
 output: pdf_document
+=======
+author: "Luana Lima"
+output: html_document
+>>>>>>> f49477e (big pig head zzx)
 always_allow_html: true
 editor_options: 
   chunk_output_type: console
@@ -33,7 +38,7 @@ library(outliers)
 library(tidyverse)
 library(smooth)
 library(zoo)
-library(kableExtra)
+library(kableExtra) 
 ```
 
 ## 1.1 Import and Convert Data
@@ -311,19 +316,24 @@ prophet_scores <- accuracy(prophet_pred, load_ts_test)
 print(prophet_scores)
 ```
 
-Combo: Prophet + TBATS
+Final Forecast
 
 ```{r}
-combo_prophet_tbats2 <- (prophet_pred_final * 0.8 + as.numeric(TBATS_for_final$mean) * 0.2)
+# Final Forecast
+TBATS_fit_final <- tbats(load_ts)
+TBATS_for_final <- forecast(TBATS_fit_final, h = 31)
 
-submission_combo_pt2 <- data.frame(
-  date = seq(as.Date("2011-07-01"), as.Date("2011-07-31"), by = "day"),
-  load = as.numeric(combo_prophet_tbats2)
-)
-write.csv(submission_combo_pt2, "./submission_combo_pt2.csv", row.names = FALSE)
+NN_fit_final <- nnetar(load_ts,
+                       p = 7,
+                       P = 1,
+                       xreg = fourier(load_ts, K = c(2, 2)))
+NN_for_final <- forecast(NN_fit_final,
+                         h = 31,
+                         xreg = fourier(load_ts, K = c(2, 2), h = 31))
 ```
 
-Export Results in csv.
+Combo: Prophet + TBATS
+
 ```{r}
 prophet_df_full <- load_daily %>%
   select(date, daily_mean) %>%
@@ -340,19 +350,22 @@ prophet_for_final <- predict(prophet_fit_final, future_final)
 
 prophet_pred_final <- tail(prophet_for_final$yhat, 31)
 
-submission_prophet <- data.frame(
-  date = seq(as.Date("2011-07-01"), as.Date("2011-07-31"), by = "day"),
-  load = as.numeric(prophet_pred_final)
-)
-write.csv(submission_prophet, "./submission_prophet.csv", row.names = FALSE)
+combo_prophet_tbats2 <- (prophet_pred_final * 0.8 + as.numeric(TBATS_for_final$mean) * 0.2)
+```
+Compare
+```{r}
+scores <- as.data.frame(rbind(SNAIVE_scores, TBATS_scores, ETS_scores,NN_scores,STLARIMA_scores,COMBO_scores,ARIMA_TRH_scores,NN_TRH_scores, prophet_scores))
+row.names(scores) <- c("SNAIVE", "TBATS", "STL+ETS","NN","STL+ARIMA", "TBATS+NN", "ARIMA_TRH_scores","NN_TRH_scores","prophet_scores")
+print(scores)
 ```
 
-Forecast using TBATS
+Export
 ```{r}
-TBATS_fit_final <- tbats(load_ts)
-TBATS_for_final <- forecast(TBATS_fit_final, h = 31)
-TBATS_for_final
-TBATS_fit_final
+submission_combo_pt2 <- data.frame(
+  date = seq(as.Date("2011-07-01"), as.Date("2011-07-31"), by = "day"),
+  load = as.numeric(combo_prophet_tbats2)
+)
+write.csv(submission_combo_pt2, "./submission_combo_pt2.csv", row.names = FALSE)
 ```
 
 
