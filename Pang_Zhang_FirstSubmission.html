@@ -1682,8 +1682,8 @@ model to predict the electricity load in July 2011.</p>
 <h2>Compare Results</h2>
 <pre><code>##                     ME     RMSE      MAE       MPE     MAPE      ACF1 Theil&#39;s U
 ## TBAT         -37.89045 578.1685 444.7257 -3.010307 11.34223 0.4591482  1.132356
-## NN           318.93852 669.5396 559.0954  5.615419 13.05646 0.5124944  1.216329
-## TBATS+NN     140.52403 595.9805 479.6772  1.302556 11.66795 0.4835241  1.117181
+## NN           373.80269 683.1154 567.6113  6.991403 13.12248 0.4989274  1.229504
+## TBATS+NN     167.95612 594.5000 477.5832  1.990548 11.54202 0.4761783  1.103551
 ## Prophet       19.75377 597.1820 476.8339 -1.740922 12.07137 0.4824732  1.141950
 ## TBAT+Prophet  -9.06834 584.2586 457.2619 -2.375614 11.62521 0.4699767  1.131892</code></pre>
 <p>Among the five models evaluated, TBATS achieved the lowest RMSE
@@ -1711,24 +1711,6 @@ assigning a weight of 0.8 to Prophet and 0.2 to TBATS (the weight was
 selected after trying different weight combinations to find the most
 accurate result), yielding daily predicted load values for each day in
 July 2011.</p>
-<pre class="r"><code>prophet_df_full &lt;- load_daily %&gt;%
-  select(date, daily_mean) %&gt;%
-  rename(ds = date, y = daily_mean) %&gt;%
-  filter(ds &lt;= as.Date(&quot;2011-06-30&quot;))
-
-prophet_fit_final &lt;- prophet(prophet_df_full,
-                             weekly.seasonality = TRUE,
-                             yearly.seasonality = TRUE,
-                             daily.seasonality = FALSE)
-
-future_final &lt;- make_future_dataframe(prophet_fit_final, periods = 31)
-prophet_for_final &lt;- predict(prophet_fit_final, future_final)
-
-prophet_pred_final &lt;- tail(prophet_for_final$yhat, 31)
-TBATS_fit_final &lt;- tbats(load_ts)
-TBATS_for_final &lt;- forecast(TBATS_fit_final, h = 31)
-
-combo_prophet_tbats2 &lt;- (prophet_pred_final * 0.8 + as.numeric(TBATS_for_final$mean) * 0.2)</code></pre>
 <table>
 <caption>Predicted Daily Load for July 2011 (TBATS + Prophet)</caption>
 <thead>
